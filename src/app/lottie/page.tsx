@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import FileInput from "./components/FileInput";
 import JsonFormatter from "./components/JsonFormatter";
 import styles from './index.module.scss'
@@ -47,27 +47,35 @@ const NextPage = () => {
     }
   }, [jsonText, selectedFiles]);
 
+  const outputJson = useMemo(() => {
+    try {
+      const jsonObj = JSON.parse(jsonText);
+      jsonObj.assets.forEach((asset: any) => {
+        if (asset.p) {
+          const { p } = asset;
+          const picName = p.split('/').pop();
+          const base64 = picBase64Map[picName];
+          if (base64) {
+            asset.p = base64;
+            delete asset.u;
+          }
+        }
+      });
+      return JSON.stringify(jsonObj);
+    } catch {
+      return '';
+    }
+  }, [jsonText, picBase64Map]);
+
 
 
   return (
     <div className={styles.container} >
       <FileInput files={selectedFiles} onFilesChange={setSelectedFiles}  />
       <JsonFormatter 
-        json={jsonText} 
+        json={outputJson} 
         onCopy={() => {
-          const jsonObj = JSON.parse(jsonText);
-          jsonObj.assets.forEach((asset: any) => {
-            if (asset.p) {
-              const { p } = asset;
-              const picName = p.split('/').pop();
-              const base64 = picBase64Map[picName];
-              if (base64) {
-                asset.p = base64;
-              }
-            }
-          });
-          navigator.clipboard.writeText(JSON.stringify(jsonObj));
-          console.log('复制成功', JSON.stringify(jsonObj));
+          navigator.clipboard.writeText(outputJson);
         }} 
       />
     </div>
