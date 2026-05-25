@@ -1,8 +1,10 @@
 'use client';
+
 import { useEffect, useMemo, useState } from 'react';
-import FileInput from "./components/FileInput";
-import JsonFormatter from "./components/JsonFormatter";
-import styles from './index.module.scss'
+
+import FileInput from './components/FileInput';
+import JsonFormatter from './components/JsonFormatter';
+import styles from './index.module.scss';
 
 const NextPage = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -38,12 +40,15 @@ const NextPage = () => {
             const reader = new FileReader();
             reader.onload = (event) => {
               const base64 = event.target?.result;
-              setPicBase64Map((prev) => ({ ...prev, [picName]: base64 as string }));
+              setPicBase64Map((prev) => ({
+                ...prev,
+                [picName]: base64 as string,
+              }));
             };
             reader.readAsDataURL(pic);
           }
         }
-      })
+      });
     }
   }, [jsonText, selectedFiles]);
 
@@ -67,20 +72,20 @@ const NextPage = () => {
     }
   }, [jsonText, picBase64Map]);
 
-
-
   return (
-    <div className={styles.container} >
-      <FileInput files={selectedFiles} onFilesChange={setSelectedFiles}  />
-      <JsonFormatter 
-        json={outputJson} 
+    <div className={styles.container}>
+      <FileInput
+        files={selectedFiles}
+        onFilesChange={setSelectedFiles}
+      />
+      <JsonFormatter
+        json={outputJson}
         onCopy={() => {
           navigator.clipboard.writeText(outputJson);
-        }} 
+        }}
       />
     </div>
   );
 };
 
 export default NextPage;
-

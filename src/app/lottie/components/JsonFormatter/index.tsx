@@ -12,27 +12,33 @@ interface IProps {
 }
 
 const JsonFormatter: FC<IProps> = ({ json, onCopy }) => {
-
   const codeRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if(json.length > 0) {
+    if (json.length > 0) {
       if (codeRef.current) {
         delete codeRef.current.dataset['highlighted'];
       }
-      hljs.highlightElement(document.querySelectorAll('.language-json')[0] as HTMLElement)
+      hljs.highlightElement(codeRef.current as HTMLElement);
     }
   }, [json]);
 
   return (
     <div className={styles.container}>
-      <button type='button' onClick={onCopy}>复制</button>
+      <button
+        type="button"
+        onClick={onCopy}
+      >
+        复制
+      </button>
       <pre>
-        <code ref={codeRef} className="language-json" contentEditable>        
-          {json.length > 0 ? JSON.stringify(JSON.parse(json), null, 2) : '请上传json文件'}
+        <code ref={codeRef} className="language-json" contentEditable>
+          {json.length > 0
+            ? JSON.stringify(JSON.parse(json), null, 2)
+            : '请上传json文件'}
         </code>
       </pre>
-    </div> 
+    </div>
   );
 };
 

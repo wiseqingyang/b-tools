@@ -1,5 +1,7 @@
-'use client'
+'use client';
+
 import React, { FC } from 'react';
+
 import styles from './index.module.scss';
 
 interface IProps {
@@ -7,8 +9,7 @@ interface IProps {
   onFilesChange: (files: File[]) => void;
 }
 
-const FileInput: FC<IProps> = ({ files, onFilesChange}) => {
-
+const FileInput: FC<IProps> = ({ files, onFilesChange }) => {
   const handleDragOver = (event: React.DragEvent<HTMLInputElement>) => {
     event.preventDefault();
   };
@@ -20,7 +21,7 @@ const FileInput: FC<IProps> = ({ files, onFilesChange}) => {
   };
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newFiles = event.target.files
+    const newFiles = event.target.files;
     if (newFiles) {
       onFilesChange(files.concat(Array.from(newFiles)));
     }
@@ -39,8 +40,8 @@ const FileInput: FC<IProps> = ({ files, onFilesChange}) => {
         {files.map((file, index) => (
           <li key={index}>
             {file.name}
-            <button 
-              type='button' 
+            <button
+              type="button"
               onClick={() => {
                 const newFiles = [...files];
                 newFiles.splice(index, 1);

@@ -1,0 +1,36 @@
+.pageContainer {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.formContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-radius: 4px;
+  padding: 8px;
+  background-color: #f5f5f5;
+  box-shadow: 0 0 4px 0 rgba(0, 0, 0, 0.2);
+}
+
+.formRow {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+  color: #112233;
+  label {
+    font-size: 12px;
+  }
+  input {
+    background: #f5f5f5;
+    border-radius: 4px;
+    border: 1px solid #112233;
+    outline: none;
+    font-size: 12px;
+    color: #112233;
+  }
+}
