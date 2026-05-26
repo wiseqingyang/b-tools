@@ -5,6 +5,7 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
+    "test": "tsc -p tsconfig.test.json && node --test .test-build/tests/array-cleaner.test.js",
     "start": "next start",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",

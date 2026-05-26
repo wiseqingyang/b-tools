@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": false,
+    "isolatedModules": false,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "outDir": ".test-build",
+    "target": "es2020",
+    "types": ["node"]
+  },
+  "include": ["src/lib/**/*.ts", "tests/**/*.ts"]
+}
