@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   collectTopLevelKeys,
+  comparePrimitiveArrays,
   dedupePrimitiveArray,
   describeDuplicate,
   findDuplicates,
@@ -70,6 +71,13 @@ test('dedupePrimitiveArray preserves first occurrence order by string identity',
     null,
     'x',
   ]);
+});
+
+test('comparePrimitiveArrays returns each side unique values by string identity', () => {
+  assert.deepEqual(comparePrimitiveArrays([1, '2', '2', null], ['1', 3]), {
+    leftOnly: ['2', null],
+    rightOnly: [3],
+  });
 });
 
 test('formatJson returns pretty JSON', () => {

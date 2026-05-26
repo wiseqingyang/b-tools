@@ -138,5 +138,35 @@ export const dedupePrimitiveArray = (items: JsonArray): JsonArray => {
   return deduped;
 };
 
+const uniqueValuesMissingFrom = (
+  sourceItems: JsonArray,
+  comparisonItems: JsonArray,
+): JsonArray => {
+  const comparisonKeys = new Set(comparisonItems.map((item) => String(item)));
+  const emittedKeys = new Set<string>();
+  const uniqueItems: JsonArray = [];
+
+  sourceItems.forEach((item) => {
+    const key = String(item);
+
+    if (comparisonKeys.has(key) || emittedKeys.has(key)) {
+      return;
+    }
+
+    emittedKeys.add(key);
+    uniqueItems.push(item);
+  });
+
+  return uniqueItems;
+};
+
+export const comparePrimitiveArrays = (
+  leftItems: JsonArray,
+  rightItems: JsonArray,
+): { leftOnly: JsonArray; rightOnly: JsonArray } => ({
+  leftOnly: uniqueValuesMissingFrom(leftItems, rightItems),
+  rightOnly: uniqueValuesMissingFrom(rightItems, leftItems),
+});
+
 export const formatJson = (value: JsonValue): string =>
   JSON.stringify(value, null, 2);

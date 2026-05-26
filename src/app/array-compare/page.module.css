@@ -1,12 +1,48 @@
 .main {
+  position: relative;
   display: grid;
   width: 100%;
   max-width: var(--container-page);
   min-height: 100vh;
   margin: 0 auto;
-  padding: var(--space-4);
+  padding: calc(var(--space-4) + var(--control-height-md) + var(--space-2))
+    var(--space-4) var(--space-4);
   gap: var(--space-4);
-  grid-template-columns: minmax(180px, 0.5fr) minmax(160px, 220px) minmax(0, 1fr);
+}
+
+.addButton {
+  position: fixed;
+  z-index: 2;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: var(--control-height-md);
+  min-height: var(--control-height-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--fg);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+}
+
+.addButton:hover {
+  background: var(--muted);
+}
+
+.datasets {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.dataset {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns:
+    minmax(180px, 0.5fr) minmax(160px, 220px)
+    minmax(0, 1fr);
 }
 
 .inputPane,
@@ -173,8 +209,23 @@
   font-weight: var(--font-weight-semibold);
 }
 
+.comparePane {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.compareTree {
+  min-width: 0;
+}
+
+.compareTree .tree {
+  height: 220px;
+}
+
 @media (max-width: 900px) {
-  .main {
+  .dataset,
+  .comparePane {
     grid-template-columns: 1fr;
   }
 

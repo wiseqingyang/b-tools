@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 
 import {
   collectTopLevelKeys,
+  comparePrimitiveArrays,
   dedupePrimitiveArray,
   describeDuplicate,
   findDuplicates,
@@ -18,6 +19,40 @@ import {
 import styles from './page.module.css';
 
 type TreePath = string;
+
+interface DatasetState {
+  asPrimitive: boolean;
+  checkedDuplicates: boolean;
+  compareSelected: boolean;
+  dedupedItems: JsonArray | null;
+  error: string;
+  id: number;
+  parsedItems: JsonArray | null;
+  selectedFields: string[];
+  sourceText: string;
+}
+
+interface PreparedDataset extends DatasetState {
+  activeItems: JsonArray | null;
+  canCompare: boolean;
+  canUsePrimitiveTools: boolean;
+  cleanedItems: JsonArray | null;
+  duplicates: ReturnType<typeof findDuplicates>;
+  fields: string[];
+  output: string;
+}
+
+const createDataset = (id: number): DatasetState => ({
+  asPrimitive: false,
+  checkedDuplicates: false,
+  compareSelected: false,
+  dedupedItems: null,
+  error: '',
+  id,
+  parsedItems: null,
+  selectedFields: [],
+  sourceText: '',
+});
 
 const isObject = (value: JsonValue): value is Record<string, JsonValue> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -54,16 +89,55 @@ const primitiveClassName = (value: JsonValue) => {
   return styles.treeValue;
 };
 
+const prepareDataset = (dataset: DatasetState): PreparedDataset => {
+  const fields = dataset.parsedItems
+    ? collectTopLevelKeys(dataset.parsedItems)
+    : [];
+  const pickedItems = dataset.parsedItems
+    ? pickObjectFields(dataset.parsedItems, dataset.selectedFields)
+    : null;
+  const selectedField = dataset.selectedFields[0];
+  const cleanedItems =
+    pickedItems &&
+    dataset.asPrimitive &&
+    dataset.selectedFields.length === 1 &&
+    selectedField
+      ? toPrimitiveArray(pickedItems, selectedField)
+      : pickedItems;
+  const activeItems = dataset.dedupedItems ?? cleanedItems;
+  const duplicates =
+    dataset.checkedDuplicates && cleanedItems
+      ? findDuplicates(cleanedItems)
+      : [];
+  const canUsePrimitiveTools =
+    dataset.asPrimitive &&
+    dataset.selectedFields.length === 1 &&
+    Boolean(cleanedItems);
+
+  return {
+    ...dataset,
+    activeItems,
+    canCompare: Boolean(cleanedItems) && dataset.asPrimitive,
+    canUsePrimitiveTools,
+    cleanedItems,
+    duplicates,
+    fields,
+    output: activeItems ? formatJson(activeItems) : '',
+  };
+};
+
 const TreeNode = ({
+  defaultExpanded = false,
   name,
   path,
   value,
 }: {
+  defaultExpanded?: boolean;
   name: string;
   path: TreePath;
   value: JsonValue;
 }) => {
-  const [expanded, setExpanded] = useState(path === '$');
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const expandable = Array.isArray(value) || isObject(value);
 
   if (!expandable) {
@@ -108,119 +182,130 @@ const TreeNode = ({
   );
 };
 
-const ArrayComparePage = () => {
-  const [sourceText, setSourceText] = useState('');
-  const [parsedItems, setParsedItems] = useState<JsonArray | null>(null);
-  const [selectedFields, setSelectedFields] = useState<string[]>([]);
-  const [asPrimitive, setAsPrimitive] = useState(false);
-  const [dedupedItems, setDedupedItems] = useState<JsonArray | null>(null);
-  const [checkedDuplicates, setCheckedDuplicates] = useState(false);
-  const [error, setError] = useState('');
+const DatasetPanel = ({
+  dataset,
+  onChange,
+}: {
+  dataset: PreparedDataset;
+  onChange: (nextDataset: DatasetState) => void;
+}) => {
+  const resetDerived = (nextDataset: DatasetState): DatasetState => ({
+    ...nextDataset,
+    checkedDuplicates: false,
+    compareSelected: false,
+    dedupedItems: null,
+  });
 
-  const fields = useMemo(
-    () => (parsedItems ? collectTopLevelKeys(parsedItems) : []),
-    [parsedItems],
-  );
-
-  const cleanedItems = useMemo(() => {
-    if (!parsedItems) {
-      return null;
-    }
-
-    const picked = pickObjectFields(parsedItems, selectedFields);
-    const selectedField = selectedFields[0];
-
-    return asPrimitive && selectedFields.length === 1 && selectedField
-      ? toPrimitiveArray(picked, selectedField)
-      : picked;
-  }, [asPrimitive, parsedItems, selectedFields]);
-
-  const activeItems = dedupedItems ?? cleanedItems;
-  const duplicates = useMemo(
-    () =>
-      checkedDuplicates && cleanedItems ? findDuplicates(cleanedItems) : [],
-    [checkedDuplicates, cleanedItems],
-  );
-  const output = activeItems ? formatJson(activeItems) : '';
-  const canUsePrimitiveTools =
-    asPrimitive && selectedFields.length === 1 && Boolean(cleanedItems);
-
-  const resetDerived = () => {
-    setDedupedItems(null);
-    setCheckedDuplicates(false);
+  const updateDataset = (nextDataset: DatasetState) => {
+    onChange(nextDataset);
   };
 
   const handleParse = () => {
     try {
-      const nextItems = parseJsonArray(sourceText);
+      const nextItems = parseJsonArray(dataset.sourceText);
 
-      setParsedItems(nextItems);
-      setSelectedFields([]);
-      setAsPrimitive(false);
-      resetDerived();
-      setError('');
+      updateDataset({
+        ...dataset,
+        asPrimitive: false,
+        checkedDuplicates: false,
+        compareSelected: false,
+        dedupedItems: null,
+        error: '',
+        parsedItems: nextItems,
+        selectedFields: [],
+      });
     } catch (parseError) {
-      setError(
-        parseError instanceof Error ? parseError.message : 'JSON parse failed',
-      );
-      setParsedItems(null);
-      setSelectedFields([]);
-      setAsPrimitive(false);
-      resetDerived();
+      updateDataset({
+        ...dataset,
+        asPrimitive: false,
+        checkedDuplicates: false,
+        compareSelected: false,
+        dedupedItems: null,
+        error:
+          parseError instanceof Error
+            ? parseError.message
+            : 'JSON parse failed',
+        parsedItems: null,
+        selectedFields: [],
+      });
     }
   };
 
   const handleClear = () => {
-    setSourceText('');
-    setParsedItems(null);
-    setSelectedFields([]);
-    setAsPrimitive(false);
-    resetDerived();
-    setError('');
+    updateDataset(createDataset(dataset.id));
   };
 
   const handleFieldToggle = (field: string) => {
-    const nextFields = selectedFields.includes(field)
-      ? selectedFields.filter((currentField) => currentField !== field)
-      : [...selectedFields, field];
+    const nextFields = dataset.selectedFields.includes(field)
+      ? dataset.selectedFields.filter((currentField) => currentField !== field)
+      : [...dataset.selectedFields, field];
 
-    setSelectedFields(nextFields);
-    setAsPrimitive((current) => (nextFields.length === 1 ? current : false));
-    resetDerived();
+    updateDataset(
+      resetDerived({
+        ...dataset,
+        asPrimitive: nextFields.length === 1 ? dataset.asPrimitive : false,
+        selectedFields: nextFields,
+      }),
+    );
   };
 
   const handlePrimitiveToggle = () => {
-    setAsPrimitive((current) => !current);
-    resetDerived();
+    updateDataset(
+      resetDerived({
+        ...dataset,
+        asPrimitive: !dataset.asPrimitive,
+      }),
+    );
   };
 
   const handleCheckAndDedupe = () => {
-    if (!cleanedItems) {
+    if (!dataset.cleanedItems) {
       return;
     }
 
-    setDedupedItems(dedupePrimitiveArray(cleanedItems));
-    setCheckedDuplicates(true);
+    updateDataset({
+      ...dataset,
+      checkedDuplicates: true,
+      dedupedItems: dedupePrimitiveArray(dataset.cleanedItems),
+    });
+  };
+
+  const handleCompareToggle = () => {
+    updateDataset({
+      ...dataset,
+      compareSelected: !dataset.compareSelected,
+    });
   };
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(output);
-      setError('');
+      await navigator.clipboard.writeText(dataset.output);
+      updateDataset({
+        ...dataset,
+        error: '',
+      });
     } catch {
-      setError('Copy failed');
+      updateDataset({
+        ...dataset,
+        error: 'Copy failed',
+      });
     }
   };
 
   return (
-    <main className={styles.main}>
-      <section className={styles.inputPane}>
+    <section className={styles.dataset}>
+      <div className={styles.inputPane}>
         <div className={styles.panel}>
           <textarea
-            aria-label="JSON array input"
+            aria-label={`JSON array input ${dataset.id}`}
             className={styles.textarea}
-            value={sourceText}
-            onChange={(event) => setSourceText(event.target.value)}
+            value={dataset.sourceText}
+            onChange={(event) =>
+              updateDataset({
+                ...dataset,
+                sourceText: event.target.value,
+              })
+            }
           />
         </div>
         <div className={styles.actions}>
@@ -237,20 +322,20 @@ const ArrayComparePage = () => {
             清空
           </button>
         </div>
-        {error ? <p className={styles.error}>{error}</p> : null}
-      </section>
+        {dataset.error ? <p className={styles.error}>{dataset.error}</p> : null}
+      </div>
 
-      <section className={styles.fieldsPane}>
-        {fields.length > 0 ? (
+      <div className={styles.fieldsPane}>
+        {dataset.fields.length > 0 ? (
           <div className={`${styles.panel} ${styles.fields}`}>
-            {fields.map((field, index) => (
+            {dataset.fields.map((field, index) => (
               <label
-                htmlFor={`field-${index}`}
+                htmlFor={`field-${dataset.id}-${index}`}
                 key={field}
               >
                 <input
-                  id={`field-${index}`}
-                  checked={selectedFields.includes(field)}
+                  id={`field-${dataset.id}-${index}`}
+                  checked={dataset.selectedFields.includes(field)}
                   type="checkbox"
                   onChange={() => handleFieldToggle(field)}
                 />
@@ -261,27 +346,32 @@ const ArrayComparePage = () => {
         ) : (
           <div className={styles.panel} />
         )}
-      </section>
+      </div>
 
-      <section className={styles.treePane}>
-        {activeItems ? (
+      <div className={styles.treePane}>
+        {dataset.activeItems ? (
           <>
             <ul className={styles.tree}>
               <TreeNode
+                defaultExpanded
                 name="$"
-                path="$"
-                value={activeItems}
+                path={`$-${dataset.id}`}
+                value={dataset.activeItems}
               />
             </ul>
             <div className={styles.stats}>
-              <span>总数 {cleanedItems?.length ?? 0}</span>
-              {checkedDuplicates ? <span>重复 {duplicates.length}</span> : null}
-              {dedupedItems ? <span>去重后 {dedupedItems.length}</span> : null}
+              <span>总数 {dataset.cleanedItems?.length ?? 0}</span>
+              {dataset.checkedDuplicates ? (
+                <span>重复 {dataset.duplicates.length}</span>
+              ) : null}
+              {dataset.dedupedItems ? (
+                <span>去重后 {dataset.dedupedItems.length}</span>
+              ) : null}
             </div>
-            {checkedDuplicates ? (
+            {dataset.checkedDuplicates ? (
               <div className={styles.duplicates}>
-                {duplicates.length > 0
-                  ? duplicates.map((duplicate) => (
+                {dataset.duplicates.length > 0
+                  ? dataset.duplicates.map((duplicate) => (
                       <span key={duplicate.key}>
                         {describeDuplicate(duplicate)}
                       </span>
@@ -290,27 +380,41 @@ const ArrayComparePage = () => {
               </div>
             ) : null}
             <div className={styles.actions}>
-              {selectedFields.length === 1 ? (
+              {dataset.selectedFields.length === 1 ? (
                 <label
                   className={styles.toggle}
-                  htmlFor="as-primitive"
+                  htmlFor={`as-primitive-${dataset.id}`}
                 >
                   <input
-                    id="as-primitive"
-                    checked={asPrimitive}
+                    id={`as-primitive-${dataset.id}`}
+                    checked={dataset.asPrimitive}
                     type="checkbox"
                     onChange={handlePrimitiveToggle}
                   />
                   <span>转为直接量</span>
                 </label>
               ) : null}
-              {canUsePrimitiveTools ? (
+              {dataset.canUsePrimitiveTools ? (
                 <button
                   type="button"
                   onClick={handleCheckAndDedupe}
                 >
                   查重去重
                 </button>
+              ) : null}
+              {dataset.canCompare ? (
+                <label
+                  className={styles.toggle}
+                  htmlFor={`compare-${dataset.id}`}
+                >
+                  <input
+                    id={`compare-${dataset.id}`}
+                    checked={dataset.compareSelected}
+                    type="checkbox"
+                    onChange={handleCompareToggle}
+                  />
+                  <span>参与对比</span>
+                </label>
               ) : null}
               <button
                 type="button"
@@ -323,7 +427,91 @@ const ArrayComparePage = () => {
         ) : (
           <ul className={styles.tree} />
         )}
-      </section>
+      </div>
+    </section>
+  );
+};
+
+const ArrayComparePage = () => {
+  const [nextDatasetId, setNextDatasetId] = useState(2);
+  const [datasets, setDatasets] = useState<DatasetState[]>([createDataset(1)]);
+
+  const preparedDatasets = useMemo(
+    () => datasets.map((dataset) => prepareDataset(dataset)),
+    [datasets],
+  );
+  const comparisonDatasets = preparedDatasets.filter(
+    (dataset) => dataset.compareSelected && dataset.cleanedItems,
+  );
+  const comparison =
+    comparisonDatasets.length >= 2 &&
+    comparisonDatasets[0].cleanedItems &&
+    comparisonDatasets[1].cleanedItems
+      ? comparePrimitiveArrays(
+          comparisonDatasets[0].cleanedItems,
+          comparisonDatasets[1].cleanedItems,
+        )
+      : null;
+
+  const updateDataset = (nextDataset: DatasetState) => {
+    setDatasets((currentDatasets) =>
+      currentDatasets.map((dataset) =>
+        dataset.id === nextDataset.id ? nextDataset : dataset,
+      ),
+    );
+  };
+
+  const handleAddDataset = () => {
+    setDatasets((currentDatasets) => [
+      ...currentDatasets,
+      createDataset(nextDatasetId),
+    ]);
+    setNextDatasetId((currentId) => currentId + 1);
+  };
+
+  return (
+    <main className={styles.main}>
+      <button
+        aria-label="新增数据组"
+        className={styles.addButton}
+        type="button"
+        onClick={handleAddDataset}
+      >
+        +
+      </button>
+      <div className={styles.datasets}>
+        {preparedDatasets.map((dataset) => (
+          <DatasetPanel
+            dataset={dataset}
+            key={dataset.id}
+            onChange={updateDataset}
+          />
+        ))}
+      </div>
+      {comparison ? (
+        <section className={styles.comparePane}>
+          <div className={styles.compareTree}>
+            <ul className={styles.tree}>
+              <TreeNode
+                defaultExpanded
+                name="A独有"
+                path="$-compare-left"
+                value={comparison.leftOnly}
+              />
+            </ul>
+          </div>
+          <div className={styles.compareTree}>
+            <ul className={styles.tree}>
+              <TreeNode
+                defaultExpanded
+                name="B独有"
+                path="$-compare-right"
+                value={comparison.rightOnly}
+              />
+            </ul>
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 };
