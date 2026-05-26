@@ -31,7 +31,6 @@ export const parseJsonArray = (sourceText: string): JsonArray => {
 };
 
 export const collectTopLevelKeys = (items: JsonArray): string[] => {
-  const keys: string[] = [];
   const seen = new Set<string>();
 
   items.forEach((item) => {
@@ -42,12 +41,11 @@ export const collectTopLevelKeys = (items: JsonArray): string[] => {
     Object.keys(item).forEach((key) => {
       if (!seen.has(key)) {
         seen.add(key);
-        keys.push(key);
       }
     });
   });
 
-  return keys;
+  return Array.from(seen).sort();
 };
 
 export const pickObjectFields = (
@@ -110,6 +108,17 @@ export const findDuplicates = (items: JsonArray): DuplicateEntry[] => {
       count: entry.count,
     }));
 };
+
+const duplicateValueLabel = (value: JsonValue): string => {
+  if (typeof value === 'string') {
+    return `"${value}"`;
+  }
+
+  return String(value);
+};
+
+export const describeDuplicate = (duplicate: DuplicateEntry): string =>
+  `${duplicateValueLabel(duplicate.value)} 重复 ${duplicate.count} 次`;
 
 export const dedupePrimitiveArray = (items: JsonArray): JsonArray => {
   const seen = new Set<string>();

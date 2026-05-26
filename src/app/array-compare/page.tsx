@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import {
   collectTopLevelKeys,
   dedupePrimitiveArray,
+  describeDuplicate,
   findDuplicates,
   formatJson,
   type JsonArray,
@@ -33,6 +34,26 @@ const valueLabel = (value: JsonValue) => {
   return String(value);
 };
 
+const primitiveClassName = (value: JsonValue) => {
+  if (value === null) {
+    return styles.valueNull;
+  }
+
+  if (typeof value === 'string') {
+    return styles.valueString;
+  }
+
+  if (typeof value === 'number') {
+    return styles.valueNumber;
+  }
+
+  if (typeof value === 'boolean') {
+    return styles.valueBoolean;
+  }
+
+  return styles.treeValue;
+};
+
 const TreeNode = ({
   name,
   path,
@@ -49,10 +70,7 @@ const TreeNode = ({
     return (
       <li className={styles.treeLine}>
         <span className={styles.treeName}>{name}</span>
-        <span className={styles.treeValue}>{valueLabel(value)}</span>
-        <span className={styles.treeType}>
-          {value === null ? 'null' : typeof value}
-        </span>
+        <span className={primitiveClassName(value)}>{valueLabel(value)}</span>
       </li>
     );
   }
@@ -70,8 +88,8 @@ const TreeNode = ({
       >
         <span>{expanded ? '-' : '+'}</span>
         <span>{name}</span>
-        <span className={styles.treeType}>
-          {Array.isArray(value) ? 'array' : 'object'}
+        <span className={styles.treeShape}>
+          {Array.isArray(value) ? '[]' : '{}'}
         </span>
       </button>
       {expanded ? (
@@ -96,7 +114,7 @@ const ArrayComparePage = () => {
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [asPrimitive, setAsPrimitive] = useState(false);
   const [dedupedItems, setDedupedItems] = useState<JsonArray | null>(null);
-  const [duplicateMode, setDuplicateMode] = useState(false);
+  const [checkedDuplicates, setCheckedDuplicates] = useState(false);
   const [error, setError] = useState('');
 
   const fields = useMemo(
@@ -119,8 +137,9 @@ const ArrayComparePage = () => {
 
   const activeItems = dedupedItems ?? cleanedItems;
   const duplicates = useMemo(
-    () => (duplicateMode && cleanedItems ? findDuplicates(cleanedItems) : []),
-    [cleanedItems, duplicateMode],
+    () =>
+      checkedDuplicates && cleanedItems ? findDuplicates(cleanedItems) : [],
+    [checkedDuplicates, cleanedItems],
   );
   const output = activeItems ? formatJson(activeItems) : '';
   const canUsePrimitiveTools =
@@ -128,7 +147,7 @@ const ArrayComparePage = () => {
 
   const resetDerived = () => {
     setDedupedItems(null);
-    setDuplicateMode(false);
+    setCheckedDuplicates(false);
   };
 
   const handleParse = () => {
@@ -175,13 +194,13 @@ const ArrayComparePage = () => {
     resetDerived();
   };
 
-  const handleDedupe = () => {
+  const handleCheckAndDedupe = () => {
     if (!cleanedItems) {
       return;
     }
 
     setDedupedItems(dedupePrimitiveArray(cleanedItems));
-    setDuplicateMode(true);
+    setCheckedDuplicates(true);
   };
 
   const handleCopy = async () => {
@@ -196,12 +215,14 @@ const ArrayComparePage = () => {
   return (
     <main className={styles.main}>
       <section className={styles.inputPane}>
-        <textarea
-          aria-label="JSON array input"
-          className={styles.textarea}
-          value={sourceText}
-          onChange={(event) => setSourceText(event.target.value)}
-        />
+        <div className={styles.panel}>
+          <textarea
+            aria-label="JSON array input"
+            className={styles.textarea}
+            value={sourceText}
+            onChange={(event) => setSourceText(event.target.value)}
+          />
+        </div>
         <div className={styles.actions}>
           <button
             type="button"
@@ -217,8 +238,11 @@ const ArrayComparePage = () => {
           </button>
         </div>
         {error ? <p className={styles.error}>{error}</p> : null}
+      </section>
+
+      <section className={styles.fieldsPane}>
         {fields.length > 0 ? (
-          <div className={styles.fields}>
+          <div className={`${styles.panel} ${styles.fields}`}>
             {fields.map((field, index) => (
               <label
                 htmlFor={`field-${index}`}
@@ -234,61 +258,14 @@ const ArrayComparePage = () => {
               </label>
             ))}
           </div>
-        ) : null}
-        {selectedFields.length === 1 ? (
-          <label
-            className={styles.toggle}
-            htmlFor="as-primitive"
-          >
-            <input
-              id="as-primitive"
-              checked={asPrimitive}
-              type="checkbox"
-              onChange={handlePrimitiveToggle}
-            />
-            <span>转为直接量</span>
-          </label>
-        ) : null}
-        {canUsePrimitiveTools ? (
-          <div className={styles.actions}>
-            <button
-              type="button"
-              onClick={() => setDuplicateMode(true)}
-            >
-              查重
-            </button>
-            <button
-              type="button"
-              onClick={handleDedupe}
-            >
-              去重
-            </button>
-          </div>
-        ) : null}
+        ) : (
+          <div className={styles.panel} />
+        )}
       </section>
 
-      <section className={styles.outputPane}>
+      <section className={styles.treePane}>
         {activeItems ? (
           <>
-            <div className={styles.actions}>
-              <button
-                type="button"
-                onClick={handleCopy}
-              >
-                复制结果
-              </button>
-            </div>
-            <textarea
-              aria-label="JSON result output"
-              className={styles.textarea}
-              readOnly
-              value={output}
-            />
-            <div className={styles.stats}>
-              <span>总数 {cleanedItems?.length ?? 0}</span>
-              {duplicateMode ? <span>重复 {duplicates.length}</span> : null}
-              {dedupedItems ? <span>去重后 {dedupedItems.length}</span> : null}
-            </div>
             <ul className={styles.tree}>
               <TreeNode
                 name="$"
@@ -296,8 +273,56 @@ const ArrayComparePage = () => {
                 value={activeItems}
               />
             </ul>
+            <div className={styles.stats}>
+              <span>总数 {cleanedItems?.length ?? 0}</span>
+              {checkedDuplicates ? <span>重复 {duplicates.length}</span> : null}
+              {dedupedItems ? <span>去重后 {dedupedItems.length}</span> : null}
+            </div>
+            {checkedDuplicates ? (
+              <div className={styles.duplicates}>
+                {duplicates.length > 0
+                  ? duplicates.map((duplicate) => (
+                      <span key={duplicate.key}>
+                        {describeDuplicate(duplicate)}
+                      </span>
+                    ))
+                  : '无重复'}
+              </div>
+            ) : null}
+            <div className={styles.actions}>
+              {selectedFields.length === 1 ? (
+                <label
+                  className={styles.toggle}
+                  htmlFor="as-primitive"
+                >
+                  <input
+                    id="as-primitive"
+                    checked={asPrimitive}
+                    type="checkbox"
+                    onChange={handlePrimitiveToggle}
+                  />
+                  <span>转为直接量</span>
+                </label>
+              ) : null}
+              {canUsePrimitiveTools ? (
+                <button
+                  type="button"
+                  onClick={handleCheckAndDedupe}
+                >
+                  查重去重
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={handleCopy}
+              >
+                复制结果
+              </button>
+            </div>
           </>
-        ) : null}
+        ) : (
+          <ul className={styles.tree} />
+        )}
       </section>
     </main>
   );

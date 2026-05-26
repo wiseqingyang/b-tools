@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   collectTopLevelKeys,
   dedupePrimitiveArray,
+  describeDuplicate,
   findDuplicates,
   formatJson,
   parseJsonArray,
@@ -23,10 +24,10 @@ test('parseJsonArray rejects non-array JSON', () => {
   assert.throws(() => parseJsonArray('{"id":1}'), /Input must be a JSON array/);
 });
 
-test('collectTopLevelKeys returns object keys in first-seen order', () => {
+test('collectTopLevelKeys returns object keys in ASCII order', () => {
   assert.deepEqual(
-    collectTopLevelKeys([{ id: 1, name: 'A' }, 'x', { name: 'B', age: 2 }]),
-    ['id', 'name', 'age'],
+    collectTopLevelKeys([{ name: 'A', id: 1 }, 'x', { Age: 2 }]),
+    ['Age', 'id', 'name'],
   );
 });
 
@@ -49,6 +50,18 @@ test('findDuplicates treats values with the same string form as duplicates', () 
     { key: '1', value: 1, count: 2 },
     { key: 'null', value: null, count: 2 },
   ]);
+});
+
+test('describeDuplicate formats duplicate count by display value', () => {
+  assert.equal(describeDuplicate({ key: '1', value: 1, count: 3 }), '1 重复 3 次');
+  assert.equal(
+    describeDuplicate({ key: 'null', value: null, count: 2 }),
+    'null 重复 2 次',
+  );
+  assert.equal(
+    describeDuplicate({ key: 'x', value: 'x', count: 2 }),
+    '"x" 重复 2 次',
+  );
 });
 
 test('dedupePrimitiveArray preserves first occurrence order by string identity', () => {
