@@ -26,6 +26,10 @@ body {
   font-size: var(--font-size-md);
 }
 
+nextjs-portal {
+  display: none !important;
+}
+
 a {
   color: inherit;
   text-decoration: none;
