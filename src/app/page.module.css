@@ -106,12 +106,17 @@
 }
 
 .toolCard {
+  display: block;
   min-width: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--card);
   padding: var(--space-4);
   box-shadow: var(--shadow-sm);
+}
+
+.toolCard:hover {
+  border-color: color-mix(in srgb, var(--primary) 36%, var(--border));
 }
 
 .toolHeader {

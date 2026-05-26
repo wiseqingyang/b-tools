@@ -65,7 +65,10 @@ export const pickObjectFields = (
 
     return fields.reduce<JsonObject>((picked, field) => {
       if (Object.prototype.hasOwnProperty.call(item, field)) {
-        picked[field] = item[field];
+        return {
+          ...picked,
+          [field]: item[field],
+        };
       }
 
       return picked;
@@ -73,10 +76,7 @@ export const pickObjectFields = (
   });
 };
 
-export const toPrimitiveArray = (
-  items: JsonArray,
-  field: string,
-): JsonArray =>
+export const toPrimitiveArray = (items: JsonArray, field: string): JsonArray =>
   items.map((item) => {
     if (!isPlainObject(item)) {
       return item;

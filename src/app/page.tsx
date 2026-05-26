@@ -5,19 +5,28 @@ import styles from './page.module.css';
 
 const tools = [
   {
+    name: '数组对比工具',
+    description: 'JSON array cleaning and comparison workspace.',
+    status: 'Ready',
+    href: '/array-compare',
+  },
+  {
     name: 'Link Cleaner',
     description: 'Normalize shared links and remove noisy tracking params.',
     status: 'Ready',
+    href: '#',
   },
   {
     name: 'Text Formatter',
     description: 'Trim, sort, compare, and reshape text snippets.',
     status: 'Draft',
+    href: '#',
   },
   {
     name: 'Payload Viewer',
     description: 'Inspect JSON payloads with readable spacing and structure.',
     status: 'Draft',
+    href: '#',
   },
 ];
 
@@ -91,8 +100,9 @@ const Home = () => {
         aria-label="Tools"
       >
         {tools.map((tool) => (
-          <article
+          <a
             className={styles.toolCard}
+            href={tool.href}
             key={tool.name}
           >
             <div className={styles.toolHeader}>
@@ -100,7 +110,7 @@ const Home = () => {
               <span>{tool.status}</span>
             </div>
             <p>{tool.description}</p>
-          </article>
+          </a>
         ))}
       </section>
     </main>
