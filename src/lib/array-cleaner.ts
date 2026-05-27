@@ -14,6 +14,12 @@ export interface DuplicateEntry {
 const isPlainObject = (value: JsonValue): value is JsonObject =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
+const isPrimitiveValue = (value: JsonValue): value is JsonPrimitive =>
+  value === null || typeof value !== 'object';
+
+export const isPrimitiveArray = (items: JsonArray): boolean =>
+  items.every(isPrimitiveValue);
+
 export const parseJsonArray = (sourceText: string): JsonArray => {
   let parsed: unknown;
 

@@ -9,6 +9,7 @@ import {
   describeDuplicate,
   findDuplicates,
   formatJson,
+  isPrimitiveArray,
   type JsonArray,
   type JsonValue,
   parseJsonArray,
@@ -105,19 +106,22 @@ const prepareDataset = (dataset: DatasetState): PreparedDataset => {
       ? toPrimitiveArray(pickedItems, selectedField)
       : pickedItems;
   const activeItems = dataset.dedupedItems ?? cleanedItems;
+  const isDirectValueDataset = dataset.parsedItems
+    ? isPrimitiveArray(dataset.parsedItems)
+    : false;
+  const isPrimitiveReady =
+    isDirectValueDataset ||
+    (dataset.asPrimitive && dataset.selectedFields.length === 1);
   const duplicates =
     dataset.checkedDuplicates && cleanedItems
       ? findDuplicates(cleanedItems)
       : [];
-  const canUsePrimitiveTools =
-    dataset.asPrimitive &&
-    dataset.selectedFields.length === 1 &&
-    Boolean(cleanedItems);
+  const canUsePrimitiveTools = isPrimitiveReady && Boolean(cleanedItems);
 
   return {
     ...dataset,
     activeItems,
-    canCompare: Boolean(cleanedItems) && dataset.asPrimitive,
+    canCompare: Boolean(cleanedItems) && isPrimitiveReady,
     canUsePrimitiveTools,
     cleanedItems,
     duplicates,

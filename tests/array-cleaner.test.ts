@@ -8,6 +8,7 @@ import {
   describeDuplicate,
   findDuplicates,
   formatJson,
+  isPrimitiveArray,
   parseJsonArray,
   pickObjectFields,
   toPrimitiveArray,
@@ -44,6 +45,12 @@ test('toPrimitiveArray converts object items by field and uses null for missing 
     toPrimitiveArray([{ id: 1 }, 'x', { name: 'B' }, { id: '1' }], 'id'),
     [1, 'x', null, '1'],
   );
+});
+
+test('isPrimitiveArray returns true only for direct-value arrays', () => {
+  assert.equal(isPrimitiveArray([1, '1', true, null]), true);
+  assert.equal(isPrimitiveArray([{ id: 1 }]), false);
+  assert.equal(isPrimitiveArray([[1]]), false);
 });
 
 test('findDuplicates treats values with the same string form as duplicates', () => {
