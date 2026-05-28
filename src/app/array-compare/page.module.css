@@ -40,9 +40,24 @@
 .dataset {
   display: grid;
   gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dataset.withFields {
   grid-template-columns:
-    minmax(180px, 0.5fr) minmax(160px, 220px)
-    minmax(0, 1fr);
+    minmax(180px, 0.5fr)
+    minmax(160px, 220px);
+}
+
+.dataset.withResult {
+  grid-template-columns: minmax(180px, 0.5fr) minmax(0, 1fr);
+}
+
+.dataset.withFields.withResult {
+  grid-template-columns: minmax(180px, 0.5fr) minmax(160px, 220px) minmax(
+      0,
+      1fr
+    );
 }
 
 .inputPane,
@@ -57,15 +72,25 @@
 .panel,
 .tree {
   height: 420px;
-  overflow: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--card);
 }
 
+.panel {
+  overflow: hidden;
+}
+
+.tree {
+  overflow: auto;
+}
+
 .textarea {
+  display: block;
   width: 100%;
   height: 100%;
+  overflow: auto;
+  appearance: none;
   resize: none;
   border: 0;
   background: transparent;
@@ -74,6 +99,10 @@
   font-size: var(--font-size-sm);
   line-height: 1.5;
   padding: var(--space-3);
+}
+
+.textarea::-webkit-resizer {
+  background: transparent;
 }
 
 .textarea:focus {
@@ -108,6 +137,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  overflow: auto;
   padding: var(--space-3);
 }
 
